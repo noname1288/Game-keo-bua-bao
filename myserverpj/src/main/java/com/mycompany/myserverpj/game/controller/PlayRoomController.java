@@ -2,17 +2,17 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.mycompany.myserverpj.model.control;
+package com.mycompany.myserverpj.game.controller;
 
-import com.mycompany.myserverpj.model.ClientThread;
-import com.mycompany.myserverpj.model.PlayRoom;
-import com.mycompany.myserverpj.server.Server;
+import com.mycompany.myserverpj.data.DBService;
+import com.mycompany.myserverpj.game.GameManager;
+import com.mycompany.myserverpj.game.playing.PlayingThread;
+import com.mycompany.myserverpj.network.ClientThread;
+import com.mycompany.myserverpj.data.entity.PlayRoom;
+import com.mycompany.myserverpj.network.ConnectionListener;
 import com.mycompany.shared.*;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,36 +20,24 @@ import java.util.concurrent.Executors;
  *
  * @author quang
  */
-public class PlayRoomControl {
+public class PlayRoomController {
 
-    private final Server server;
     private final ArrayList<PlayRoom> rooms;
     private ExecutorService executorService;
+    private final DBService dbService;
+    private final GameManager gameManager;
+    private final PlayingThread playingThread = null;
 
     // chấp nhận yêu cầu khởi tạo phòng  
     // xử lý chấp nhận lời mời
-    public PlayRoomControl(Server server) {
-        this.server = server;
-        rooms = new ArrayList<>();
+    public PlayRoomController(GameManager gameManager) {
+        rooms = gameManager.getRooms();
         executorService = Executors.newFixedThreadPool(10);
+        dbService = new DBService();
+        this.gameManager = gameManager;
     }
 
-    //gui danh sach phong cho client
-    public void updateListRoom() throws IOException {
-        HashMap<String, String> data = new HashMap<>();
-        Iterator<PlayRoom> iterator = rooms.iterator();
-        while (iterator.hasNext()) {
-            PlayRoom r = iterator.next();
-            String IDRomm = String.valueOf(r.getMaPhong());
-            String numberOfPlayer = (r.getPlayer2() != null) ? "2" : "1";
-            data.put(IDRomm, numberOfPlayer);
-        }
 
-        for (ClientThread cl : server.getListClient()) {
-            cl.getObjOut().writeObject(new Message(MessageAction.LIST_ROOM, data));
-            cl.getObjOut().flush();
-        }
-    }
 
     //
     public void reqNewRoom(ClientThread player) throws IOException {
@@ -67,7 +55,7 @@ public class PlayRoomControl {
         rooms.add(room);
         createRoom(maPhong, player);
         //gui thong tin
-        updateListRoom();
+        gameManager.updateListRoom();
     }
     
     private void createRoom(int maPhong, ClientThread client) {
@@ -94,7 +82,7 @@ public class PlayRoomControl {
         }
 
         // tìm ClientThread của người nhận
-        for (ClientThread thread : server.getListClient()) {
+        for (ClientThread thread : gameManager.getListClient()) {
             if (thread.getPlayer().getPlayerName().equals(playerReceive)) {
                 // gửi lời mời đến người nhận
                 // data gồm số phòng và tên người gửi
@@ -127,8 +115,8 @@ public class PlayRoomControl {
                                     room.getPlayer1().getPlayer()
                             ));
                     client.getObjOut().flush();
-                    server.updateAllPlayers();
-                    updateListRoom();
+                    gameManager.updateAllPlayers();
+                    gameManager.updateListRoom();
                 } else {
                     client.getObjOut().writeObject(
                             new Message(MessageAction.ROOM_FULL, null));
@@ -156,8 +144,9 @@ public class PlayRoomControl {
                     client.getObjOut().writeObject(
                             new Message(MessageAction.INFO_ANOTHER_PLAYER, room.getPlayer1().getPlayer()));
                     client.getObjOut().flush();
-                    server.updateAllPlayers();
-                    updateListRoom();
+
+                    gameManager.updateAllPlayers();
+                    gameManager.updateListRoom();
                 } else {
                     client.getObjOut().writeObject(
                             new Message(MessageAction.ROOM_FULL, null));
@@ -177,7 +166,7 @@ public class PlayRoomControl {
                     room.getPlayer1().getObjOut().flush();
                     room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.PLAY, null));
                     room.getPlayer2().getObjOut().flush();
-                    executorService.submit(new Playing(room, 10));
+                    executorService.submit(() ->new PlayingThread(room, 10));
                     break;
                 }
             } else if (room.getPlayer2().equals(client)) {
@@ -187,7 +176,7 @@ public class PlayRoomControl {
                     room.getPlayer1().getObjOut().flush();
                     room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.PLAY, null));
                     room.getPlayer2().getObjOut().flush();
-                    executorService.submit(new Playing(room, 10));
+                    executorService.submit(new PlayingThread(room, 10));
                     break;
                 }
             }
@@ -220,129 +209,12 @@ public class PlayRoomControl {
             }
         }
         //gui thong tin
-        updateListRoom();
+        gameManager.updateListRoom();
     }
 
-    // Luồng thực hiện quá trình chơi
-    private class Playing extends Thread {
 
-        private PlayRoom room;
-        private int countdownTime;
 
-        public Playing(PlayRoom room, int countdownTime) {
-            this.room = room;
-            this.countdownTime = countdownTime;
-        }
 
-        @Override
-        public void run() {
-            try {
-                // gửi thông điệp cho người chơi nhận biết
-                room.getPlayer1().getObjOut().writeObject(new Message(MessageAction.READY, null));
-                room.getPlayer1().getObjOut().flush();
-                room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.READY, null));
-                room.getPlayer2().getObjOut().flush();
-                Thread.sleep(1000);
-
-                while (countdownTime > 0) {
-                    // Gửi thời gian đếm ngược cho cả hai người chơi
-                    room.getPlayer1().getObjOut().writeObject(new Message(MessageAction.COUNTDOWN, countdownTime));
-                    room.getPlayer1().getObjOut().flush();
-                    room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.COUNTDOWN, countdownTime));
-                    room.getPlayer2().getObjOut().flush();
-
-                    // Đợi 1 giây
-                    Thread.sleep(1000);
-                    countdownTime--;
-                }
-
-                // gửi yêu cầu dừng đếm và yêu cầu gửi kết quả
-                room.getPlayer1().getObjOut().writeObject(new Message(MessageAction.TIME_UP, null));
-                room.getPlayer1().getObjOut().flush();
-                room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.TIME_UP, null));
-                room.getPlayer2().getObjOut().flush();
-
-                // chờ kết quả trả về
-                int retries = 0;
-                int maxRetries = 50;  // Giới hạn số lần kiểm tra
-                while (room.getPlayer1().getChoice() == -1 || room.getPlayer2().getChoice() == -1) {
-                    Thread.sleep(100);  // Chờ 100ms giữa mỗi lần kiểm tra
-                    retries++;
-                }
-
-                // ghi nhận kết quả
-                int player1Answer = room.getPlayer1().getChoice();
-                int player2Answer = room.getPlayer2().getChoice();
-                room.setStatusPlayer1(false);
-                room.setStatusPlayer2(false);
-                // Kiểm tra kết quả và gửi thông báo thắng thua
-                String result = determineWinner(player1Answer, player2Answer);
-                // update điểm
-                if (result.equals("HOA")) {
-                    //người chơi 1
-                    String ID1 = room.getPlayer1().getPlayer().getID();
-                    float score1 = room.getPlayer1().getPlayer().updateScore(0.5f);
-                    room.getPlayer1().getControl().updateScore(ID1, score1);
-                    //người chơi 2
-                    String ID2 = room.getPlayer2().getPlayer().getID();
-                    float score2 = room.getPlayer2().getPlayer().updateScore(0.5f);
-                    room.getPlayer2().getControl().updateScore(ID2, score2);
-                    //gui kết quả
-                    room.getPlayer1().getObjOut().writeObject(new Message(MessageAction.RESULT, "HOA"));
-                    room.getPlayer1().getObjOut().flush();
-                    room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.RESULT, "HOA"));
-                    room.getPlayer2().getObjOut().flush();
-                } else if (result.equals("1")) {
-                    String ID1 = room.getPlayer1().getPlayer().getID();
-                    float score1 = room.getPlayer1().getPlayer().updateScore(1f);
-                    room.getPlayer1().getControl().updateScore(ID1, score1);
-                    //gui kết quả
-                    room.getPlayer1().getObjOut().writeObject(new Message(MessageAction.RESULT, "THANG"));
-                    room.getPlayer1().getObjOut().flush();
-                    room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.RESULT, "THUA"));
-                    room.getPlayer2().getObjOut().flush();
-                } else if(result.equals("2")) {
-                    String ID2 = room.getPlayer2().getPlayer().getID();
-                    float score2 = room.getPlayer2().getPlayer().updateScore(1f);
-                    room.getPlayer2().getControl().updateScore(ID2, score2);
-                    //gui kết quả
-                    room.getPlayer1().getObjOut().writeObject(new Message(MessageAction.RESULT, "THUA"));
-                    room.getPlayer1().getObjOut().flush();
-                    room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.RESULT, "THANG"));
-                    room.getPlayer2().getObjOut().flush();
-                } else {
-                    room.getPlayer1().getObjOut().writeObject(new Message(MessageAction.CANCEL_ROOM, null));
-                    room.getPlayer1().getObjOut().flush();
-                    room.getPlayer2().getObjOut().writeObject(new Message(MessageAction.CANCEL_ROOM, null));
-                    room.getPlayer2().getObjOut().flush();
-                }
-                // reset choice
-                room.getPlayer1().setChoice(-1);
-                room.getPlayer2().setChoice(-1);
-            } catch (InterruptedException | IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    // Phương thức xác định người thắng
-    private String determineWinner(int answer1, int answer2) {
-        if(answer1 == 0 && answer2 == 0)
-        {
-            return "0";
-        }
-        else if (answer1 == answer2) {
-            return "HOA";
-        } else if ((answer1 == 1 && answer2 == 3)
-                || (answer1 == 3 && answer2 == 2)
-                || (answer1 == 2 && answer2 == 1)
-                || (answer1 != 0 && answer2 == 0)) {
-            //yeu cau nhap nhat DB
-            return "1";
-        } else {
-            return "2";
-        }
-    }
 
 //    public void shutdown() {
 //        executorService.shutdown();

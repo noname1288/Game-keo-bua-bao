@@ -4,13 +4,24 @@
  */
 package com.mycompany.myserverpj.server;
 
+import com.mycompany.myserverpj.data.ConnectDB;
+import com.mycompany.myserverpj.network.ConnectionListener;
+
 /**
  *
  * @author quang
  */
 public class ServerRun {
     public static void main(String[] args) {
-        Server server = new Server();
-        server.openServer();
+        initializeServer();
+    }
+
+    private static void initializeServer() {
+        //ket noi database
+        ConnectDB con = new ConnectDB();
+
+        //khoi dong server
+        ConnectionListener connectionListener = new ConnectionListener();
+        connectionListener.openServer();
     }
 }

@@ -2,12 +2,12 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.mycompany.myserverpj.model;
+package com.mycompany.myserverpj.network;
 
+import com.mycompany.myserverpj.game.GameManager;
 import com.mycompany.shared.Message;
 import com.mycompany.shared.Player;
-import com.mycompany.myserverpj.model.control.PlayerControler;
-import com.mycompany.myserverpj.server.Server;
+import com.mycompany.myserverpj.game.controller.PlayerControler;
 import com.mycompany.shared.MessageAction;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 public class ClientThread extends Thread {
 
     private final Socket clientSocket;
-    private final Server server;
+    private final GameManager gameManager;
     private PlayerControler control;
     private ObjectOutputStream objOut;
     private ObjectInputStream objIn;
@@ -36,9 +36,9 @@ public class ClientThread extends Thread {
     // tạo biến lưu lựa chọn ở đây cho đơn giản
     private int choice;
 
-    public ClientThread(Socket clientSocket, Server server) {
+    public ClientThread(Socket clientSocket, GameManager gameManager) {
         this.clientSocket = clientSocket;
-        this.server = server;
+        this.gameManager = gameManager;
         this.status = true;
         // khởi tạo trước để làm FLAG 
         choice = -1;
@@ -88,12 +88,12 @@ public class ClientThread extends Thread {
                     case LOGIN:
                         player = control.login(message);
                         if (player != null) {
-                            if (server.checkCLientOn(player)) {
+                            if (gameManager.checkCLientOn(player)) {
                                 objOut.writeObject(new Message(MessageAction.LOGIN_FAILED , null));
                             } else {
                                 status = true;
                                 objOut.writeObject(new Message(MessageAction.LOGIN_SUCCESS, player));
-                                server.updateClientList(this);
+                                gameManager.updateClientList(this);
                             }
                         } else {
                             objOut.writeObject(new Message(MessageAction.LOGIN_FAILED, null));
@@ -116,34 +116,34 @@ public class ClientThread extends Thread {
                         closeConnection();
                         break;
                     case NEW_ROOM:
-                        server.getControlRoom().reqNewRoom(this);
+                        gameManager.getControlRoom().reqNewRoom(this);
                         break;
                     case SEND_INVITE:
-                        server.getControlRoom().reqSendInvite(message, player.getPlayerName());
+                        gameManager.getControlRoom().reqSendInvite(message, player.getPlayerName());
                         break;
                     case ACCEPT:
-                        server.getControlRoom().respAcceptInvite(message, this);
+                        gameManager.getControlRoom().respAcceptInvite(message, this);
                         break;
                     case LIST_PLAYER:
-                        server.updateAllPlayers();
+                        gameManager.updateAllPlayers();
                         break;
                     case LIST_ROOM:
-                        server.getControlRoom().updateListRoom();
+                        gameManager.updateListRoom();
                         break;
                     case CHOICE:
                         choice = (int) message.getContent();
                         break;
                     case READY:
-                        server.getControlRoom().setReadyStatus(this);
+                        gameManager.getControlRoom().setReadyStatus(this);
                         break;
                     case PLAY:
                         break;
                     case OUT_ROOM:
-                        server.getControlRoom().OutRoom(this);
-                        server.updateAllPlayers();
+                        gameManager.getControlRoom().OutRoom(this);
+                        gameManager.updateAllPlayers();
                         break;
                     case ENTER_ROOM:
-                        server.getControlRoom().reqEnterRoom(message, this);
+                        gameManager.getControlRoom().reqEnterRoom(message, this);
                         break;
                     case RANK_LIST:
                         control.getRankList();
@@ -172,7 +172,7 @@ public class ClientThread extends Thread {
     private void closeConnection() {
         try {
             try (clientSocket) {
-                server.removeClient(this);
+                gameManager.removeClient(this);
             }
             objOut.close();
             objIn.close();
