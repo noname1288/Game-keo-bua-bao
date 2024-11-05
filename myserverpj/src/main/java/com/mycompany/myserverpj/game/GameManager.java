@@ -2,7 +2,7 @@ package com.mycompany.myserverpj.game;
 
 import com.mycompany.myserverpj.data.entity.PlayRoom;
 import com.mycompany.myserverpj.game.controller.PlayRoomController;
-import com.mycompany.myserverpj.network.ClientThread;
+import com.mycompany.myserverpj.network.ClientHandler;
 import com.mycompany.myserverpj.network.ConnectionListener;
 import com.mycompany.shared.Message;
 import com.mycompany.shared.MessageAction;
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameManager {
-    private List<ClientThread> listClient;
+    private List<ClientHandler> listClient;
     private PlayRoomController controlRoom;
     private final ArrayList<PlayRoom> rooms;
     //kiem tra luong hoat dong
@@ -31,11 +31,11 @@ public class GameManager {
         return rooms;
     }
 
-    public List<ClientThread> getListClient() {
+    public List<ClientHandler> getListClient() {
         return listClient;
     }
 
-    public void setListClient(List<ClientThread> listClient) {
+    public void setListClient(List<ClientHandler> listClient) {
         this.listClient = listClient;
     }
 
@@ -51,7 +51,7 @@ public class GameManager {
         HashMap<String, HashMap<String, String>> data = new HashMap<>();
 
         int i = 1;
-        for (ClientThread client : listClient) {
+        for (ClientHandler client : listClient) {
             HashMap<String, String> dataThisClient = new HashMap<>();
             dataThisClient.put("playerName", client.getPlayer().getPlayerName());
             dataThisClient.put("status", (client.isStatus() ? "true" : "false"));
@@ -59,17 +59,17 @@ public class GameManager {
             i++;
         }
 
-        for (ClientThread client : listClient) {
+        for (ClientHandler client : listClient) {
             client.updatePlayerList(data);
         }
     }
 
-    public void updateClientList(ClientThread client) {
+    public void updateClientList(ClientHandler client) {
         listClient.add(client);
         System.out.println(listClient.size());
     }
 
-    public void removeClient(ClientThread client) {
+    public void removeClient(ClientHandler client) {
         listClient.remove(client);
         // Cập nhật lại danh sách người chơi sau khi client rời đi
         updateAllPlayers();
@@ -87,7 +87,7 @@ public class GameManager {
         }
 
         try  {
-            for (ClientThread cl : this.getListClient()) {
+            for (ClientHandler cl : this.getListClient()) {
                 cl.getObjOut().writeObject(new Message(MessageAction.LIST_ROOM, data));
                 cl.getObjOut().flush();
             }
@@ -103,7 +103,7 @@ public class GameManager {
     // kiểm tra tài khoản đăng nhập chưa
     // duyệt danh sách client kiểm tra trùng ID
     public boolean checkCLientOn(Player player) {
-        for (ClientThread client : listClient) {
+        for (ClientHandler client : listClient) {
             if (client.getPlayer().getID().equals(player.getID())) {
                 return true;
             }

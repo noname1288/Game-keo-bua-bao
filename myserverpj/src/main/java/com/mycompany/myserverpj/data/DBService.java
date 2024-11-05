@@ -10,6 +10,7 @@ import java.util.HashMap;
 
 public class DBService {
 
+    public DBService (){}
     //các hàm DAO làm việc với DB
     //lay doi tuong player
     public Player getPlayer(String username, String password) {

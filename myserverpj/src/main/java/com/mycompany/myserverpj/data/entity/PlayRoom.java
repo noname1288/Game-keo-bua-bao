@@ -4,7 +4,7 @@
  */
 package com.mycompany.myserverpj.data.entity;
 
-import com.mycompany.myserverpj.network.ClientThread;
+import com.mycompany.myserverpj.network.ClientHandler;
 
 /**
  *
@@ -13,12 +13,12 @@ import com.mycompany.myserverpj.network.ClientThread;
 public class PlayRoom {
 
     private int maPhong;
-    private ClientThread player1;
-    private ClientThread player2;
+    private ClientHandler player1;
+    private ClientHandler player2;
     private boolean statusPlayer1;
     private boolean statusPlayer2;
 
-    public PlayRoom(int maPhong, ClientThread player1) {
+    public PlayRoom(int maPhong, ClientHandler player1) {
         this.maPhong = maPhong;
         this.player1 = player1;
         statusPlayer1 = false;
@@ -45,19 +45,19 @@ public class PlayRoom {
         return maPhong;
     }
 
-    public ClientThread getPlayer1() {
+    public ClientHandler getPlayer1() {
         return player1;
     }
 
-    public void setPlayer1(ClientThread player1) {
+    public void setPlayer1(ClientHandler player1) {
         this.player1 = player1;
     }
 
-    public ClientThread getPlayer2() {
+    public ClientHandler getPlayer2() {
         return player2;
     }
 
-    public void setPlayer2(ClientThread player2) {
+    public void setPlayer2(ClientHandler player2) {
         this.player2 = player2;
     }
 

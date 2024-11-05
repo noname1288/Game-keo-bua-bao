@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  *
  * @author quang
  */
-public class ClientThread extends Thread {
+public class ClientHandler extends Thread {
 
     private final Socket clientSocket;
     private final GameManager gameManager;
@@ -36,7 +36,7 @@ public class ClientThread extends Thread {
     // tạo biến lưu lựa chọn ở đây cho đơn giản
     private int choice;
 
-    public ClientThread(Socket clientSocket, GameManager gameManager) {
+    public ClientHandler(Socket clientSocket, GameManager gameManager) {
         this.clientSocket = clientSocket;
         this.gameManager = gameManager;
         this.status = true;
@@ -155,7 +155,7 @@ public class ClientThread extends Thread {
         } catch (IOException | ClassNotFoundException e) {
             System.out.println(Arrays.toString(e.getStackTrace()));
         } catch (SQLException ex) {
-            Logger.getLogger(ClientThread.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

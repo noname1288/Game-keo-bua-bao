@@ -7,9 +7,8 @@ package com.mycompany.myserverpj.game.controller;
 import com.mycompany.myserverpj.data.DBService;
 import com.mycompany.myserverpj.game.GameManager;
 import com.mycompany.myserverpj.game.playing.PlayingThread;
-import com.mycompany.myserverpj.network.ClientThread;
+import com.mycompany.myserverpj.network.ClientHandler;
 import com.mycompany.myserverpj.data.entity.PlayRoom;
-import com.mycompany.myserverpj.network.ConnectionListener;
 import com.mycompany.shared.*;
 import java.io.IOException;
 import java.util.*;
@@ -40,7 +39,7 @@ public class PlayRoomController {
 
 
     //
-    public void reqNewRoom(ClientThread player) throws IOException {
+    public void reqNewRoom(ClientHandler player) throws IOException {
         // player yeu cau la dang ranh
         int maPhong = 1;
         Collections.sort(rooms, (PlayRoom p1, PlayRoom p2) -> Integer.compare(p1.getMaPhong(), p2.getMaPhong()));
@@ -58,7 +57,7 @@ public class PlayRoomController {
         gameManager.updateListRoom();
     }
     
-    private void createRoom(int maPhong, ClientThread client) {
+    private void createRoom(int maPhong, ClientHandler client) {
         try {
             client.getObjOut().writeObject(new Message(MessageAction.NEW_ROOM, maPhong));
         } catch (Exception e) {
@@ -82,7 +81,7 @@ public class PlayRoomController {
         }
 
         // tìm ClientThread của người nhận
-        for (ClientThread thread : gameManager.getListClient()) {
+        for (ClientHandler thread : gameManager.getListClient()) {
             if (thread.getPlayer().getPlayerName().equals(playerReceive)) {
                 // gửi lời mời đến người nhận
                 // data gồm số phòng và tên người gửi
@@ -96,7 +95,7 @@ public class PlayRoomController {
         }
     }
 
-    public void respAcceptInvite(Message message, ClientThread client) throws IOException {
+    public void respAcceptInvite(Message message, ClientHandler client) throws IOException {
         String inviter = (String) message.getContent();
 
         for (PlayRoom room : rooms) {
@@ -127,7 +126,7 @@ public class PlayRoomController {
         }
     }
     
-    public void reqEnterRoom(Message message, ClientThread client) throws IOException {
+    public void reqEnterRoom(Message message, ClientHandler client) throws IOException {
         int IDRoom = (int) message.getContent();
 
         for (PlayRoom room : rooms) {
@@ -157,7 +156,7 @@ public class PlayRoomController {
         }
     }
 
-    public void setReadyStatus(ClientThread client) throws IOException {
+    public void setReadyStatus(ClientHandler client) throws IOException {
         for (PlayRoom room : rooms) {
             if (room.getPlayer1().equals(client)) {
                 room.setStatusPlayer1(true);
@@ -184,7 +183,7 @@ public class PlayRoomController {
     }
 
     //xử lý yêu cầu rời phòng chơi
-    public void OutRoom(ClientThread client) throws IOException {
+    public void OutRoom(ClientHandler client) throws IOException {
         Iterator<PlayRoom> iterator = rooms.iterator();
         while (iterator.hasNext()) {
             PlayRoom room = iterator.next();
